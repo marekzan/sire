@@ -1,34 +1,66 @@
-use std::env;
-use std::fs;
-use std::io;
-use std::io::prelude::*;
+use serde::Deserialize;
+use std::{
+    env, fs,
+    io::{self, Error},
+    path::PathBuf,
+};
 
-fn main() -> io::Result<()> {
-  let path = env::current_dir()?;
-  // Get the base config directory (typically ~/.config on Linux)
-  if let Some(config_dir) = dirs::config_dir() {
-    // Append the application-specific path
-    let sire_dir = config_dir.join("sire");
-    let config_path = sire_dir.join("config.yaml");
+#[derive(Debug, Deserialize)]
+struct Root {
+    directories: Vec<Directory>,
+}
 
-    // Check if the file exists
-    if config_path.exists() {
-      println!("Config file found at: {:?}", config_path);
-    } else {
-      if !sire_dir.exists() {
-        fs::create_dir_all(&sire_dir).expect("Failed to create config directory");
-      }
+#[derive(Debug, Deserialize)]
+struct Directory {
+    name: String,
+    notes: Vec<Note>,
+}
 
-      // Create the `config.yaml` file with default content
-      let mut file = fs::File::create(&config_path).expect("Failed to create config file");
-      file
-        .write_all(b"/home/mrk/workspace/temp/sire/")
-        .expect("Failed to write default config");
+#[derive(Debug, Deserialize)]
+struct Note {
+    content: String,
+}
 
-      println!("Created default config file at: {:?}", config_path);
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let path = env::current_dir()?;
+
+    let data = load_data()?;
+
+    data.directories.iter().for_each(|dir| {
+        if dir.name == path.to_str().unwrap() {
+            for (index, note) in dir.notes.iter().enumerate() {
+                println!("Note #{}", index + 1);
+                println!("Content: {}", note.content);
+                println!();
+            }
+        }
+    });
+
+    Ok(())
+}
+
+fn load_data() -> Result<Root, Box<dyn std::error::Error>> {
+    let data_path = get_data_dir()?;
+    let yaml_data = fs::read_to_string(data_path)?;
+    let data: Root = serde_yaml::from_str::<Root>(&yaml_data)?;
+    Ok(data)
+}
+
+fn get_data_dir() -> Result<PathBuf, Error> {
+    let Some(data_dir) = dirs::data_dir() else {
+        return Err(Error::new(
+            io::ErrorKind::NotFound,
+            "Failed to find config directory",
+        ));
+    };
+
+    let sire_dir = data_dir.join("sire");
+    let data_path = sire_dir.join("data.yaml");
+
+    if !data_path.exists() {
+        fs::create_dir_all(sire_dir)?;
+        fs::write(&data_path, "")?;
     }
-  } else {
-    println!("Could not determine the config directory.");
-  }
-  Ok(())
+
+    Ok(data_path)
 }
