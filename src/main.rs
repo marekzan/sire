@@ -1,66 +1,49 @@
-use serde::Deserialize;
-use std::{
-    env, fs,
-    io::{self, Error},
-    path::PathBuf,
-};
+mod commands;
+mod hook;
+mod io;
 
-#[derive(Debug, Deserialize)]
-struct Root {
-    directories: Vec<Directory>,
+use std::env;
+
+use clap::{command, Parser, Subcommand};
+use commands::{add::add, check::check, remove::remove};
+use io::data::load_data;
+
+#[derive(Parser)]
+#[command(name = "sire")]
+#[command(bin_name = "sire")]
+#[command(about = "A simple reminder")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
 }
 
-#[derive(Debug, Deserialize)]
-struct Directory {
-    name: String,
-    notes: Vec<Note>,
-}
+#[derive(Subcommand, Debug, Clone)]
+enum Commands {
+    Check {},
+    Add {
+        #[arg(short, long)]
+        content: String,
 
-#[derive(Debug, Deserialize)]
-struct Note {
-    content: String,
+        #[arg(short, long)]
+        detached: bool,
+    },
+    Remove {},
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = env::current_dir()?;
-
-    let data = load_data()?;
-
-    data.directories.iter().for_each(|dir| {
-        if dir.name == path.to_str().unwrap() {
-            for (index, note) in dir.notes.iter().enumerate() {
-                println!("Note #{}", index + 1);
-                println!("Content: {}", note.content);
-                println!();
-            }
-        }
-    });
-
-    Ok(())
-}
-
-fn load_data() -> Result<Root, Box<dyn std::error::Error>> {
-    let data_path = get_data_dir()?;
-    let yaml_data = fs::read_to_string(data_path)?;
-    let data: Root = serde_yaml::from_str::<Root>(&yaml_data)?;
-    Ok(data)
-}
-
-fn get_data_dir() -> Result<PathBuf, Error> {
-    let Some(data_dir) = dirs::data_dir() else {
-        return Err(Error::new(
-            io::ErrorKind::NotFound,
-            "Failed to find config directory",
-        ));
+    let path = match path.to_str() {
+        Some(path) => path,
+        None => panic!("Could not find current dir. Exiting!"),
     };
 
-    let sire_dir = data_dir.join("sire");
-    let data_path = sire_dir.join("data.yaml");
+    let mut data = load_data()?;
+    let cli = Cli::parse();
 
-    if !data_path.exists() {
-        fs::create_dir_all(sire_dir)?;
-        fs::write(&data_path, "")?;
+    match &cli.command {
+        Commands::Check {} => check(path, &data)?,
+        Commands::Add { content, detached } => add(path, &mut data, content.clone(), detached)?,
+        Commands::Remove {} => remove(),
     }
-
-    Ok(data_path)
+    Ok(())
 }
