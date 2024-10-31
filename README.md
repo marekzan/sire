@@ -21,7 +21,6 @@ Now, every time you enter this folder, `sire` will display your notes in your te
 
 - [Installation](#installation)
 - [Usage](#usage)
-- [Commands](#commands)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -73,7 +72,7 @@ TODO
 sire remove
 ```
 
-### Contributing
+## Contributing
 
 Contributions are welcome! Please follow these steps to contribute:
 
