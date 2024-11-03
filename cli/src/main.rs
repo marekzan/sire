@@ -1,12 +1,10 @@
 mod commands;
-mod hook;
-mod io;
 
+use core::io::data::load_data;
 use std::env;
 
 use clap::{command, Parser, Subcommand};
 use commands::{add::add, check::check, remove::remove};
-use io::data::load_data;
 
 #[derive(Parser)]
 #[command(name = "sire")]

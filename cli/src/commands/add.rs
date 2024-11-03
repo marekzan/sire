@@ -1,4 +1,4 @@
-use crate::io::{data::Data, save::save_data};
+use core::io::{data::Data, save::save_data};
 
 pub fn add(
     path: &str,
