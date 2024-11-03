@@ -1,10 +1,14 @@
 mod commands;
 
-use core::io::data::load_data;
-use std::env;
+use core::{db::migration::start_migration, io::data::load_data};
+use std::{env, error::Error};
 
 use clap::{command, Parser, Subcommand};
-use commands::{add::add, check::check, remove::remove};
+use commands::{
+    add::{add, add_db},
+    check::{check, check_db},
+    remove::remove,
+};
 
 #[derive(Parser)]
 #[command(name = "sire")]
@@ -26,9 +30,21 @@ enum Commands {
         detached: bool,
     },
     Remove {},
+    Dbadd {
+        #[arg(short, long)]
+        name: String,
+
+        #[arg(short, long)]
+        age: i32,
+
+        #[arg(short, long)]
+        email: String,
+    },
+    Dbcheck {},
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
+    start_migration()?;
     let path = env::current_dir()?;
     let path = match path.to_str() {
         Some(path) => path,
@@ -44,6 +60,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             add(path, &mut data, content.clone(), detached)?
         }
         Some(Commands::Remove {}) => remove(),
+        Some(Commands::Dbadd { name, age, email }) => add_db(name, age, email)?,
+        Some(Commands::Dbcheck {}) => check_db()?,
         None => println!("No command provided"),
     }
     Ok(())
