@@ -12,7 +12,7 @@ use commands::{add::add, check::check, remove::remove};
 #[command(about = "A simple reminder")]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand, Debug, Clone)]
@@ -39,9 +39,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Check {} => check(path, &data)?,
-        Commands::Add { content, detached } => add(path, &mut data, content.clone(), detached)?,
-        Commands::Remove {} => remove(),
+        Some(Commands::Check {}) => check(path, &data)?,
+        Some(Commands::Add { content, detached }) => {
+            add(path, &mut data, content.clone(), detached)?
+        }
+        Some(Commands::Remove {}) => remove(),
+        None => println!("No command provided"),
     }
     Ok(())
 }
